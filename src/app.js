@@ -3,6 +3,7 @@ const cors = require('cors');
 const app = express();
 
 const studentRoutes = require('./routes/student.routes');
+const authRoutes = require('./routes/auth.routes');
 const logger = require('./middlewares/logger.middleware');
 const errorHandler = require('./middlewares/error.middleware');
 const notFound = require('./middlewares/notFound.middleware');
@@ -21,6 +22,7 @@ app.use(cors({
 app.use(logger);
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 
 // 404 Middleware

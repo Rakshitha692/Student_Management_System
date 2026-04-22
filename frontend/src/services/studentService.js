@@ -9,6 +9,8 @@
  *   - import.meta.env.VITE_API_BASE_URL
  */
 
+import { authHeaders } from './authService';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 /**
@@ -60,17 +62,15 @@ export const fetchStudents = async (page = 1, limit = 10, search = '') => {
       limit,
       ...(search && { search })
     });
-    
+
     const response = await fetch(
       `${API_BASE_URL}/api/students?${queryParams}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       }
     );
-    
+
     const result = await handleResponse(response);
     return result.data || []; // API returns { success, data, pagination }
   } catch (error) {
@@ -93,12 +93,10 @@ export const fetchStudentById = async (id) => {
       `${API_BASE_URL}/api/students/${id}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       }
     );
-    
+
     const result = await handleResponse(response);
     return result.data; // API returns { success, data }
   } catch (error) {
@@ -121,13 +119,11 @@ export const addStudent = async (studentData) => {
       `${API_BASE_URL}/api/students`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: authHeaders(),
         body: JSON.stringify(studentData)
       }
     );
-    
+
     const result = await handleResponse(response);
     return result.data; // API returns { success, data, message }
   } catch (error) {
@@ -151,13 +147,11 @@ export const updateStudent = async (id, studentData) => {
       `${API_BASE_URL}/api/students/${id}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: authHeaders(),
         body: JSON.stringify(studentData)
       }
     );
-    
+
     const result = await handleResponse(response);
     return result.data; // API returns { success, data, message }
   } catch (error) {
@@ -180,12 +174,10 @@ export const deleteStudent = async (id) => {
       `${API_BASE_URL}/api/students/${id}`,
       {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       }
     );
-    
+
     const result = await handleResponse(response);
     return result; // API returns { success, message }
   } catch (error) {
@@ -207,17 +199,15 @@ export const searchStudents = async (query) => {
     if (!query.trim()) {
       return fetchStudents(); // Return all if empty query
     }
-    
+
     const response = await fetch(
       `${API_BASE_URL}/api/students?search=${encodeURIComponent(query)}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       }
     );
-    
+
     const result = await handleResponse(response);
     return result.data || [];
   } catch (error) {

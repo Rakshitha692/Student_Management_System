@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as studentService from '../services/studentService';
+import { isTokenExpired } from '../services/authService';
 
 export const useStudents = () => {
   const [students, setStudents] = useState([]);
@@ -30,8 +31,13 @@ export const useStudents = () => {
       const data = await studentService.fetchStudents();
       setStudents(data);
     } catch (err) {
-      const errorMessage = err.message || 'Failed to load students';
-      setError(errorMessage);
+      if (err.status === 401 || err.status === 403 || isTokenExpired()) {
+        window.dispatchEvent(new CustomEvent('navigate', { detail: { page: '/login' } }));
+        setError('Session expired. Please log in again.');
+      } else {
+        const errorMessage = err.message || 'Failed to load students';
+        setError(errorMessage);
+      }
       console.error('Load students error:', err);
     } finally {
       setLoading(false);
@@ -123,15 +129,20 @@ export const useStudents = () => {
       await loadStudents();
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     try {
       const results = await studentService.searchStudents(query);
       setStudents(results);
     } catch (err) {
-      const errorMessage = err.message || 'Search failed';
-      setError(errorMessage);
+      if (err.status === 401 || err.status === 403) {
+        window.dispatchEvent(new CustomEvent('navigate', { detail: { page: '/login' } }));
+        setError('Session expired. Please log in again.');
+      } else {
+        const errorMessage = err.message || 'Search failed';
+        setError(errorMessage);
+      }
       console.error('Search error:', err);
     } finally {
       setLoading(false);

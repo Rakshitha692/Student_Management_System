@@ -10,6 +10,7 @@
 import React from 'react';
 import { Button } from '../components/Button';
 import { Link } from '../components/Link';
+import { isAuthenticated } from '../services/authService';
 
 export const LandingPage = () => {
   return (
@@ -26,11 +27,19 @@ export const LandingPage = () => {
             Create, read, update, and delete student records effortlessly.
           </p>
           <div>
-            <Link to="/dashboard">
-              <Button variant="primary" className="text-lg px-8 py-3">
-                Get Started →
-              </Button>
-            </Link>
+            {isAuthenticated() ? (
+              <Link to="/dashboard">
+                <Button variant="primary" className="text-lg px-8 py-3">
+                  Go to Dashboard →
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/signup">
+                <Button variant="primary" className="text-lg px-8 py-3">
+                  Get Started →
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -122,11 +131,13 @@ export const LandingPage = () => {
         <div className="container mx-auto px-4 text-center space-y-6">
           <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
           <p className="text-lg text-blue-100">
-            Explore the dashboard and start managing your students now.
+            {isAuthenticated()
+              ? 'Continue managing your students in the dashboard.'
+              : 'Create a free account and start managing your students now.'}
           </p>
-          <Link to="/dashboard">
+          <Link to={isAuthenticated() ? '/dashboard' : '/signup'}>
             <Button variant="primary" className="bg-white text-blue-600 hover:bg-gray-100">
-              Open Dashboard →
+              {isAuthenticated() ? 'Open Dashboard →' : 'Sign Up Free →'}
             </Button>
           </Link>
         </div>

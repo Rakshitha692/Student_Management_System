@@ -8,8 +8,11 @@ const {
   deleteStudent,
 } = require('../controllers/student.controller');
 const validateStudent = require('../middlewares/validation.middleware');
+const authMiddleware = require('../middlewares/auth.middleware');
 
-// Routes
+// All student routes are protected - only authenticated users can access
+router.use(authMiddleware);
+
 router.post('/', validateStudent, createStudent);
 router.get('/', getAllStudents); // Supports ?page=1&limit=10&search=john
 router.get('/:id', getStudentById);
