@@ -2,13 +2,12 @@
  * Dashboard Page
  * 
  * Main page showing list of students with CRUD operations.
+ * Now connected to real backend API!
  * 
- * React Concepts:
- *  - useState: manage page state (showForm, editingStudent, etc.)
- *  - useEffect: load students on mount (via custom hook)
- *  - Props: pass callbacks and data to child components
- * 
- * Uses semantic HTML: <main>, <section>
+ * Uses:
+ *  - useStudents hook for state management
+ *  - Real API calls via studentService
+ *  - MongoDB _id instead of mock id
  */
 
 import React, { useState } from 'react';
@@ -38,6 +37,7 @@ export const DashboardPage = () => {
     students,
     loading,
     error,
+    clearError,
     handleAddStudent,
     handleUpdateStudent,
     handleDeleteStudent,
@@ -49,22 +49,32 @@ export const DashboardPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [viewMode, setViewMode] = useState(VIEW_MODE.CARD);
-  const [localError, setLocalError] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
 
   /**
    * Handle adding a new student
-   * CLOSURE: This function closes over state setters and handleAddStudent
+   * Calls API through service layer
    */
   const handleAddClick = async (formData) => {
     setFormLoading(true);
     try {
-      await handleAddStudent(formData);
-      setShowForm(false);
-      setEditingStudent(null);
-      setLocalError(null);
+      console.log('Submitting student data:', formData);
+      const result = await handleAddStudent(formData);
+      console.log('Student added successfully:', result);
+      
+      // Add a small delay to ensure state updates properly
+      setTimeout(() => {
+        setShowForm(false);
+        setEditingStudent(null);
+      }, 100);
     } catch (err) {
-      setLocalError('Failed to add student. Please try again.');
+      // Error is already set in hook, just keep form open
+      console.error('Add failed:', err);
+      console.error('Error details:', {
+        message: err.message,
+        status: err.status,
+        data: err.data
+      });
     } finally {
       setFormLoading(false);
     }
@@ -72,27 +82,26 @@ export const DashboardPage = () => {
 
   /**
    * Handle editing a student
-   * CLOSURE: Accesses setEditingStudent, setShowForm
+   * Load existing data into form
    */
   const handleEditClick = (student) => {
     setEditingStudent(student);
     setShowForm(true);
-    setLocalError(null);
   };
 
   /**
    * Handle updating student
-   * CLOSURE: Accesses state and async function
+   * Sends PUT request to backend
    */
   const handleUpdateClick = async (formData) => {
     setFormLoading(true);
     try {
-      await handleUpdateStudent(editingStudent.id, formData);
+      // MongoDB uses _id, not id
+      await handleUpdateStudent(editingStudent._id, formData);
       setShowForm(false);
       setEditingStudent(null);
-      setLocalError(null);
     } catch (err) {
-      setLocalError('Failed to update student. Please try again.');
+      console.error('Update failed:', err);
     } finally {
       setFormLoading(false);
     }
@@ -100,14 +109,14 @@ export const DashboardPage = () => {
 
   /**
    * Handle deleting student
+   * Removes from backend and UI
    */
   const handleDeleteClick = async (id) => {
     setFormLoading(true);
     try {
       await handleDeleteStudent(id);
-      setLocalError(null);
     } catch (err) {
-      setLocalError('Failed to delete student. Please try again.');
+      console.error('Delete failed:', err);
     } finally {
       setFormLoading(false);
     }
@@ -119,36 +128,55 @@ export const DashboardPage = () => {
   const handleCancelForm = () => {
     setShowForm(false);
     setEditingStudent(null);
-    setLocalError(null);
   };
 
   // If showing form, display it
   if (showForm) {
-    return (
-      <main className="container mx-auto px-4 py-12">
-        {localError && (
-          <ErrorAlert message={localError} onClose={() => setLocalError(null)} />
-        )}
-        <StudentForm
-          editingStudent={editingStudent}
-          onSubmit={editingStudent ? handleUpdateClick : handleAddClick}
-          onCancel={handleCancelForm}
-          loading={formLoading}
-        />
-      </main>
-    );
+    try {
+      return (
+        <main className="container mx-auto px-4 py-12">
+          {error && (
+            <ErrorAlert message={error} onClose={clearError} />
+          )}
+          <StudentForm
+            editingStudent={editingStudent}
+            onSubmit={editingStudent ? handleUpdateClick : handleAddClick}
+            onCancel={handleCancelForm}
+            loading={formLoading}
+          />
+        </main>
+      );
+    } catch (renderError) {
+      console.error('Form rendering error:', renderError);
+      return (
+        <main className="container mx-auto px-4 py-12">
+          <ErrorAlert 
+            message="Form rendering error. Please refresh the page." 
+            onClose={clearError} 
+          />
+        </main>
+      );
+    }
   }
 
   // Main dashboard view
-  return (
-    <main className="container mx-auto px-4 py-12">
+  try {
+    console.log('Rendering dashboard - showForm:', showForm, 'students:', students, 'loading:', loading);
+    
+    // Ensure we have valid data to render
+    const safeStudents = Array.isArray(students) ? students : [];
+    const isLoading = loading === true;
+    const hasError = error && error.length > 0;
+    
+    return (
+      <main className="container mx-auto px-4 py-12">
       {/* Header Section */}
       <section className="mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-2">
-              Manage all student records ({students.length} total)
+              {isLoading ? 'Loading...' : `Manage all student records (${safeStudents.length} total)`}
             </p>
           </div>
           <Button
@@ -157,6 +185,7 @@ export const DashboardPage = () => {
               setEditingStudent(null);
               setShowForm(true);
             }}
+            disabled={isLoading}
             className="text-lg px-6 py-3"
           >
             + Add Student
@@ -167,21 +196,19 @@ export const DashboardPage = () => {
         <SearchBar onSearch={handleSearch} />
 
         {/* Error Alert */}
-        {localError && (
-          <ErrorAlert message={localError} onClose={() => setLocalError(null)} />
-        )}
-        {error && (
-          <ErrorAlert message={error} onClose={() => setLocalError(null)} />
+        {hasError && (
+          <ErrorAlert message={error} onClose={clearError} />
         )}
       </section>
 
       {/* View Mode Toggle */}
-      {students.length > 0 && (
+      {safeStudents.length > 0 && (
         <div className="mb-6 flex gap-2">
           <Button
             variant={viewMode === VIEW_MODE.CARD ? 'primary' : 'secondary'}
             onClick={() => setViewMode(VIEW_MODE.CARD)}
             className="text-sm"
+            disabled={isLoading}
           >
             📇 Card View
           </Button>
@@ -189,6 +216,7 @@ export const DashboardPage = () => {
             variant={viewMode === VIEW_MODE.TABLE ? 'primary' : 'secondary'}
             onClick={() => setViewMode(VIEW_MODE.TABLE)}
             className="text-sm"
+            disabled={isLoading}
           >
             📊 Table View
           </Button>
@@ -196,9 +224,9 @@ export const DashboardPage = () => {
       )}
 
       {/* Loading State */}
-      {loading ? (
+      {isLoading ? (
         <LoadingSpinner />
-      ) : students.length === 0 ? (
+      ) : safeStudents.length === 0 ? (
         <EmptyState
           onAddClick={() => {
             setEditingStudent(null);
@@ -208,36 +236,54 @@ export const DashboardPage = () => {
       ) : viewMode === VIEW_MODE.CARD ? (
         // Card Grid View
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {students.map(student => (
-            <StudentCard
-              key={student.id}
-              student={student}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          ))}
+          {safeStudents.map((student, index) => {
+            console.log(`Rendering student ${index}:`, student);
+            if (!student._id) {
+              console.error('Student missing _id:', student);
+            }
+            return (
+              <StudentCard
+                key={student._id || `temp-${index}`}
+                student={student}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+              />
+            );
+          })}
         </div>
       ) : (
         // Table View
         <StudentTable
-          students={students}
+          students={safeStudents}
           onEdit={handleEditClick}
           onDelete={handleDeleteClick}
         />
       )}
 
       {/* Refresh Button */}
-      {students.length > 0 && (
+      {safeStudents.length > 0 && (
         <div className="mt-8 text-center">
           <Button
             variant="secondary"
             onClick={loadStudents}
             className="text-sm"
+            disabled={isLoading}
           >
             🔄 Refresh Data
           </Button>
         </div>
       )}
     </main>
-  );
+    );
+  } catch (renderError) {
+    console.error('Dashboard rendering error:', renderError);
+    return (
+      <main className="container mx-auto px-4 py-12">
+        <ErrorAlert 
+          message="Dashboard rendering error. Please refresh the page." 
+          onClose={clearError} 
+        />
+      </main>
+    );
+  }
 };

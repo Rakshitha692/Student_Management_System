@@ -3,9 +3,7 @@
  * 
  * Table view for displaying students (alternative to card view).
  * Better for desktop, can show more info at once.
- * 
- * WHY: Different component for different layout needs.
- * Mobile might prefer cards, desktop might prefer table.
+ * Uses MongoDB _id field
  * 
  * Uses semantic HTML: <table>, <thead>, <tbody>
  */
@@ -36,7 +34,7 @@ export const StudentTable = ({ students, onEdit, onDelete }) => {
         <tbody>
           {students.map((student, index) => (
             <tr
-              key={student.id}
+              key={student._id}
               className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
             >
               <td className="px-6 py-4 text-sm text-gray-800 font-medium">{student.name}</td>
@@ -55,7 +53,7 @@ export const StudentTable = ({ students, onEdit, onDelete }) => {
                     variant="danger"
                     onClick={() => {
                       if (window.confirm(`Delete ${student.name}?`)) {
-                        onDelete(student.id);
+                        onDelete(student._id);
                       }
                     }}
                     className="text-xs px-3 py-1"

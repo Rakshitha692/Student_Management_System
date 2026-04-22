@@ -2,16 +2,7 @@
  * StudentCard Component
  * 
  * Displays individual student info in a card format.
- * 
- * WHY: Reusable card component. Encapsulates student display logic.
- * Can be used in grid/list views. 
- * 
- * Props:
- *  - student: { id, name, age, course }
- *  - onEdit: callback when edit button clicked
- *  - onDelete: callback when delete button clicked
- * 
- * Uses semantic HTML: <article>, <figure>, <figcaption>
+ * Now works with MongoDB _id field
  */
 
 import React from 'react';
@@ -37,7 +28,7 @@ export const StudentCard = ({ student, onEdit, onDelete }) => {
           <p><span className="font-semibold">Course:</span> {student.course}</p>
         </div>
 
-        <p className="text-xs text-gray-400">ID: {student.id}</p>
+        <p className="text-xs text-gray-400">ID: {student._id}</p>
       </div>
 
       {/* Action Buttons */}
@@ -53,7 +44,7 @@ export const StudentCard = ({ student, onEdit, onDelete }) => {
           variant="danger"
           onClick={() => {
             if (window.confirm(`Delete ${student.name}?`)) {
-              onDelete(student.id);
+              onDelete(student._id);
             }
           }}
           className="flex-1"

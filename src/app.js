@@ -11,7 +11,6 @@ const notFound = require('./middlewares/notFound.middleware');
 app.use(express.json());
 
 // CORS Configuration
-// Allow frontend to access backend APIs
 app.use(cors({
   origin: true,
   credentials: true,

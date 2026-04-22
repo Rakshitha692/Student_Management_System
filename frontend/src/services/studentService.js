@@ -1,132 +1,227 @@
 /**
  * Student Service Layer
  * 
- * This layer abstracts data fetching and manipulation.
- * Currently uses mock data with simulated async behavior.
+ * This layer abstracts all API calls to the backend.
+ * Uses fetch API with async/await for clean, modern code.
  * 
- * FUTURE: Replace fetch() calls with real API endpoints:
- *   - fetch('http://localhost:5000/api/students')
- *   - fetch('http://localhost:5000/api/students', { method: 'POST', ... })
- * 
- * WHY: This structure allows seamless backend integration without
- * changing component code. Components only call these methods.
+ * API Base URL is configured via environment variables:
+ *   - .env: VITE_API_BASE_URL
+ *   - import.meta.env.VITE_API_BASE_URL
  */
 
-import { mockStudents } from '../data/mockData.js';
-
-// Simulate API delay (remove when using real API)
-const API_DELAY = 500;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 /**
- * Simulate async behavior - useful for showing loading states
- * In production, this will be actual network latency
+ * Custom error class for API errors
+ * Makes error handling clearer in components
  */
-const simulateDelay = () => 
-  new Promise(resolve => setTimeout(resolve, API_DELAY));
+class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.status = status;
+    this.data = data;
+    this.name = 'ApiError';
+  }
+}
 
 /**
- * Fetch all students
- * Currently: Returns mock data after simulated delay
- * Future API: GET /api/students
+ * Helper function to handle API responses
+ * Throws error if response is not ok
+ * Returns parsed JSON data
  */
-export const fetchStudents = async () => {
-  await simulateDelay();
-  // TODO: Replace with real API call:
-  // const response = await fetch(`${process.env.REACT_APP_API_URL}/api/students`);
-  // return await response.json();
-  return [...mockStudents];
+const handleResponse = async (response) => {
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new ApiError(
+      data.message || `HTTP Error: ${response.status}`,
+      response.status,
+      data
+    );
+  }
+  
+  return data;
 };
 
 /**
- * Fetch student by ID
- * Currently: Filters mock data
- * Future API: GET /api/students/:id
+ * Fetch all students from backend
+ * GET /api/students
+ * 
+ * @param {number} page - Page number for pagination
+ * @param {number} limit - Items per page
+ * @param {string} search - Search query
+ * @returns {Promise<Array>} Array of students
+ * @throws {ApiError} If request fails
+ */
+export const fetchStudents = async (page = 1, limit = 10, search = '') => {
+  try {
+    const queryParams = new URLSearchParams({
+      page,
+      limit,
+      ...(search && { search })
+    });
+    
+    const response = await fetch(
+      `${API_BASE_URL}/api/students?${queryParams}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result.data || []; // API returns { success, data, pagination }
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch single student by ID
+ * GET /api/students/:id
+ * 
+ * @param {string} id - Student ID
+ * @returns {Promise<Object>} Student object
+ * @throws {ApiError} If request fails or student not found
  */
 export const fetchStudentById = async (id) => {
-  await simulateDelay();
-  // TODO: Replace with: fetch(`${process.env.REACT_APP_API_URL}/api/students/${id}`)
-  return mockStudents.find(student => student.id === id);
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/students/${id}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result.data; // API returns { success, data }
+  } catch (error) {
+    console.error(`Error fetching student ${id}:`, error);
+    throw error;
+  }
 };
 
 /**
- * Add new student
- * Currently: Adds to mock data array
- * Future API: POST /api/students
+ * Create a new student
+ * POST /api/students
+ * 
+ * @param {Object} studentData - Student data { name, age, course }
+ * @returns {Promise<Object>} Created student object with ID
+ * @throws {ApiError} If validation fails or request fails
  */
 export const addStudent = async (studentData) => {
-  await simulateDelay();
-  // TODO: Replace with:
-  // const response = await fetch(`${process.env.REACT_APP_API_URL}/api/students`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(studentData)
-  // });
-  // return await response.json();
-  
-  const newStudent = {
-    id: Date.now().toString(),
-    ...studentData
-  };
-  mockStudents.push(newStudent);
-  return newStudent;
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/students`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(studentData)
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result.data; // API returns { success, data, message }
+  } catch (error) {
+    console.error('Error adding student:', error);
+    throw error;
+  }
 };
 
 /**
- * Update student
- * Currently: Updates mock data
- * Future API: PUT /api/students/:id
+ * Update existing student
+ * PUT /api/students/:id
+ * 
+ * @param {string} id - Student ID
+ * @param {Object} studentData - Updated student data { name, age, course }
+ * @returns {Promise<Object>} Updated student object
+ * @throws {ApiError} If validation fails, student not found, or request fails
  */
 export const updateStudent = async (id, studentData) => {
-  await simulateDelay();
-  // TODO: Replace with:
-  // const response = await fetch(`${process.env.REACT_APP_API_URL}/api/students/${id}`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(studentData)
-  // });
-  // return await response.json();
-  
-  const index = mockStudents.findIndex(s => s.id === id);
-  if (index !== -1) {
-    mockStudents[index] = { id, ...studentData };
-    return mockStudents[index];
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/students/${id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(studentData)
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result.data; // API returns { success, data, message }
+  } catch (error) {
+    console.error(`Error updating student ${id}:`, error);
+    throw error;
   }
-  throw new Error('Student not found');
 };
 
 /**
- * Delete student
- * Currently: Removes from mock data
- * Future API: DELETE /api/students/:id
+ * Delete a student
+ * DELETE /api/students/:id
+ * 
+ * @param {string} id - Student ID
+ * @returns {Promise<Object>} Response with success status
+ * @throws {ApiError} If student not found or request fails
  */
 export const deleteStudent = async (id) => {
-  await simulateDelay();
-  // TODO: Replace with:
-  // const response = await fetch(`${process.env.REACT_APP_API_URL}/api/students/${id}`, {
-  //   method: 'DELETE'
-  // });
-  // return await response.json();
-  
-  const index = mockStudents.findIndex(s => s.id === id);
-  if (index !== -1) {
-    mockStudents.splice(index, 1);
-    return { success: true };
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/students/${id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result; // API returns { success, message }
+  } catch (error) {
+    console.error(`Error deleting student ${id}:`, error);
+    throw error;
   }
-  throw new Error('Student not found');
 };
 
 /**
  * Search students by name or course
- * Currently: Filters mock data
- * Future API: GET /api/students/search?q=query
+ * GET /api/students?search=query
+ * 
+ * @param {string} query - Search query (name or course)
+ * @returns {Promise<Array>} Array of matching students
+ * @throws {ApiError} If request fails
  */
 export const searchStudents = async (query) => {
-  await simulateDelay();
-  // TODO: Replace with: fetch(`${process.env.REACT_APP_API_URL}/api/students/search?q=${query}`)
-  
-  const lowerQuery = query.toLowerCase();
-  return mockStudents.filter(student =>
-    student.name.toLowerCase().includes(lowerQuery) ||
-    student.course.toLowerCase().includes(lowerQuery)
-  );
+  try {
+    if (!query.trim()) {
+      return fetchStudents(); // Return all if empty query
+    }
+    
+    const response = await fetch(
+      `${API_BASE_URL}/api/students?search=${encodeURIComponent(query)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const result = await handleResponse(response);
+    return result.data || [];
+  } catch (error) {
+    console.error('Error searching students:', error);
+    throw error;
+  }
 };

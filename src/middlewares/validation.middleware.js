@@ -1,7 +1,12 @@
 ﻿const ApiError = require('../utils/apiError');
 
 const validateStudent = (req, res, next) => {
-  const { name, age, course } = req.body;
+  let { name, age, course } = req.body;
+
+  // Convert age to number if it's a string
+  if (typeof age === 'string') {
+    age = Number(age);
+  }
 
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
     return next(new ApiError(400, 'Name is required and must be at least 2 characters'));
@@ -12,6 +17,9 @@ const validateStudent = (req, res, next) => {
   if (!course || typeof course !== 'string' || course.trim().length < 2) {
     return next(new ApiError(400, 'Course is required and must be at least 2 characters'));
   }
+
+  // Update req.body with converted age
+  req.body.age = age;
 
   next();
 };

@@ -84,12 +84,15 @@ export const StudentForm = ({ editingStudent, onSubmit, onCancel, loading }) => 
       return;
     }
 
-    // Submit
+    // Submit - convert age to number
     try {
-      await onSubmit(formData);
-      setFormData({ name: '', age: '', course: '' });
-      setErrors({});
-      setSubmitted(false);
+      const dataToSubmit = {
+        ...formData,
+        age: Number(formData.age) // Convert age to number for backend
+      };
+      await onSubmit(dataToSubmit);
+      // Don't reset form here - let parent component handle navigation
+      // This prevents blank state during transition
     } catch (err) {
       console.error('Form submission error:', err);
     }
