@@ -21,6 +21,7 @@ import {
   logout,
   fetchMe,
 } from './services/authService';
+import { connectSocket, disconnectSocket } from './services/socketService';
 
 export const App = () => {
   const [currentPage, setCurrentPage] = useState('/');
@@ -53,6 +54,20 @@ export const App = () => {
   }, [checkAuth]);
 
   /**
+   * Connect to WebSocket when user is authenticated
+   */
+  useEffect(() => {
+    if (user) {
+      connectSocket();
+    }
+    return () => {
+      if (!user) {
+        disconnectSocket();
+      }
+    };
+  }, [user]);
+
+  /**
    * Periodic token expiry check (every 60 seconds).
    * Automatically logs the user out when the token expires.
    */
@@ -60,6 +75,7 @@ export const App = () => {
     const interval = setInterval(() => {
       if (user && isTokenExpired()) {
         logout();
+        disconnectSocket();
         setUser(null);
         setCurrentPage('/login');
       }
@@ -90,6 +106,7 @@ export const App = () => {
    */
   const handleLogout = () => {
     logout();
+    disconnectSocket();
     setUser(null);
     setCurrentPage('/login');
   };

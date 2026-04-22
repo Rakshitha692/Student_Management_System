@@ -17,6 +17,7 @@
 import React, { useState, useEffect } from 'react';
 import { validateStudent } from '../utils/validation';
 import { Button } from './Button';
+import { uploadImage } from '../services/uploadService';
 
 export const StudentForm = ({ editingStudent, onSubmit, onCancel, loading }) => {
   // State: form data
@@ -36,10 +37,14 @@ export const StudentForm = ({ editingStudent, onSubmit, onCancel, loading }) => 
       setFormData({
         name: editingStudent.name,
         age: editingStudent.age,
-        course: editingStudent.course
+        course: editingStudent.course,
+        profileImage: editingStudent.profileImage || ''
       });
+      setImagePreview(editingStudent.profileImage || '');
     } else {
-      setFormData({ name: '', age: '', course: '' });
+      setFormData({ name: '', age: '', course: '', profileImage: '' });
+      setImagePreview('');
+      setImageFile(null);
     }
     setErrors({});
     setSubmitted(false);
@@ -67,6 +72,53 @@ export const StudentForm = ({ editingStudent, onSubmit, onCancel, loading }) => 
         [name]: ''
       }));
     }
+  };
+
+  /**
+   * Handle image file selection with preview
+   */
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, image: 'Only image files are allowed' }));
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, image: 'File size must be less than 5MB' }));
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setErrors(prev => ({ ...prev, image: '' }));
+
+    // Upload immediately to Cloudinary
+    try {
+      setUploading(true);
+      const result = await uploadImage(file);
+      setFormData(prev => ({ ...prev, profileImage: result.data.url }));
+      setErrors(prev => ({ ...prev, image: '' }));
+    } catch (err) {
+      setErrors(prev => ({ ...prev, image: err.message || 'Image upload failed' }));
+      setImagePreview('');
+      setImageFile(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /**
+   * Remove image
+   */
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, profileImage: '' }));
   };
 
   /**
@@ -166,6 +218,50 @@ export const StudentForm = ({ editingStudent, onSubmit, onCancel, loading }) => 
         />
         {errors.course && (
           <p className="text-red-500 text-sm mt-1">{errors.course}</p>
+        )}
+      </div>
+
+      {/* Profile Image Field */}
+      <div className="mb-6">
+        <label htmlFor="image" className="block text-sm font-semibold text-gray-700 mb-2">
+          Profile Image
+        </label>
+        <div className="space-y-3">
+          <input
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+            onChange={handleImageChange}
+            disabled={uploading}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+          />
+          {uploading && (
+            <p className="text-blue-600 text-sm">Uploading image...</p>
+          )}
+          {errors.image && (
+            <p className="text-red-500 text-sm">{errors.image}</p>
+          )}
+        </div>
+
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mt-4">
+            <div className="relative inline-block">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

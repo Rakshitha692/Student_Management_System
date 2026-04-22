@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as studentService from '../services/studentService';
 import { isTokenExpired } from '../services/authService';
+import { onStudentEvent, offStudentEvent } from '../services/socketService';
 
 export const useStudents = () => {
   const [students, setStudents] = useState([]);
@@ -51,6 +52,33 @@ export const useStudents = () => {
   useEffect(() => {
     loadStudents();
   }, [loadStudents]);
+
+  /**
+   * Listen for WebSocket events for real-time updates
+   */
+  useEffect(() => {
+    const handleStudentCreated = (newStudent) => {
+      setStudents(prev => [...prev, newStudent]);
+    };
+
+    const handleStudentUpdated = (updatedStudent) => {
+      setStudents(prev => prev.map(s => s._id === updatedStudent._id ? updatedStudent : s));
+    };
+
+    const handleStudentDeleted = (deletedStudent) => {
+      setStudents(prev => prev.filter(s => s._id !== deletedStudent.id));
+    };
+
+    onStudentEvent('student:created', handleStudentCreated);
+    onStudentEvent('student:updated', handleStudentUpdated);
+    onStudentEvent('student:deleted', handleStudentDeleted);
+
+    return () => {
+      offStudentEvent('student:created', handleStudentCreated);
+      offStudentEvent('student:updated', handleStudentUpdated);
+      offStudentEvent('student:deleted', handleStudentDeleted);
+    };
+  }, []);
 
   /**
    * Add new student
